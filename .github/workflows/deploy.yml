@@ -130,3 +130,75 @@ jobs:
         with:
           name: launcher-${{ matrix.os }}
           path: build/*
+
+  build-flatpak:
+    name: Build Flatpak package
+    runs-on: ubuntu-latest
+    if: ${{ vars.FLATPAK_ID != '' }}
+    env:
+      UPLOAD_TO_SERVER: ${{ github.ref == 'refs/heads/master' && secrets.SSH_KEY != '' && secrets.SERVER_USER != '' && secrets.SERVER_ADDR != '' }}
+      HAS_POST_DEPLOY_SCRIPT: ${{ secrets.POST_DEPLOY_SCRIPT_PATH != '' }}
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-44
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak-cargo-generator dependencies
+        run: dnf install -y python3 python3-aiohttp python3-toml wget
+      - name: Run flatpak-cargo-generator
+        run: |
+          wget -O flatpak/flatpak-cargo-generator.py https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/a1eb29c5f3038413ffafd4fea34e62c361c109ad/cargo/flatpak-cargo-generator.py
+          python flatpak/flatpak-cargo-generator.py Cargo.lock -o flatpak/cargo-sources.json
+
+      - name: Set bundle filename
+        run: |
+          BUNDLE_FILENAME=$(python -c "import os; print(''.join(x.capitalize() for x in '${{ vars.LAUNCHER_NAME }}'.lower().split()))").flatpak
+          echo "BUNDLE_FILENAME=$BUNDLE_FILENAME" >> $GITHUB_ENV
+
+      - name: Generate manifest
+        working-directory: flatpak
+        env:
+          VERSION: ${{ github.sha }}
+          FLATPAK_ID: ${{ vars.FLATPAK_ID }}
+          LAUNCHER_NAME: ${{ vars.LAUNCHER_NAME }}
+          LAUNCHER_DESCRIPTION: ${{ vars.LAUNCHER_DESCRIPTION }}
+          FLATPAK_KEYWORDS: ${{ vars.FLATPAK_KEYWORDS }}
+          VERSION_MANIFEST_URL: ${{ vars.VERSION_MANIFEST_URL }}
+        run: python gen_manifest.py
+
+      - name: Build Flatpak package
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: ${{ env.BUNDLE_FILENAME }}
+          manifest-path: flatpak/${{ vars.FLATPAK_ID }}.yml
+
+      - name: Set up SSH
+        if: ${{ env.UPLOAD_TO_SERVER }}
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: no
+
+      - name: Upload to server
+        if: ${{ env.UPLOAD_TO_SERVER }}
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_ADDR: ${{ secrets.SERVER_ADDR }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BUNDLE_FILENAME $SERVER_USER@$SERVER_ADDR:$SERVER_PATH/
+
+      - name: Run post-deploy script
+        if: ${{ env.UPLOAD_TO_SERVER && env.HAS_POST_DEPLOY_SCRIPT == 'true' }}
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_ADDR: ${{ secrets.SERVER_ADDR }}
+          POST_DEPLOY_SCRIPT_PATH: ${{ secrets.POST_DEPLOY_SCRIPT_PATH }}
+        run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_ADDR "bash \"$POST_DEPLOY_SCRIPT_PATH\""
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-flatpak
+          path: $BUNDLE_FILENAME

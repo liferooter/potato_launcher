@@ -9,3 +9,6 @@ generated/
 workdir/
 .direnv/
 .cargo/config.toml
+.env
+
+.flatpak-builder/

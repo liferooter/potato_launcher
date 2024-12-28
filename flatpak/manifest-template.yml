@@ -1,0 +1,46 @@
+id: {{ flatpak_id }}
+
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+
+command: potato-launcher
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+
+modules:
+  - name: potato-launcher
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/potato-launcher/cargo
+        VERSION: {{ version }}
+        LAUNCHER_NAME: {{ app_name }}
+        VERSION_MANIFEST_URL: {{ version_manifest_url }}
+    build-commands:
+      - cargo --offline fetch --manifest-path Cargo.toml --verbose
+      - cargo --offline build --profile release-lto --bin launcher
+      - install -Dm755 ./target/release-lto/launcher /app/bin/potato-launcher
+    sources:
+      - type: dir
+        path: ../
+      - "cargo-sources.json"
+
+  - name: potato-launcher-meta
+    buildsystem: simple
+    build-commands:
+      - install -D launcher/assets/{{ app_name_lower }}.png /app/share/icons/hicolor/512x512/apps/{{ flatpak_id }}.png
+      - install -D flatpak/{{ flatpak_id }}.desktop /app/share/applications/{{ flatpak_id }}.desktop
+    sources:
+      - type: dir
+        path: ../

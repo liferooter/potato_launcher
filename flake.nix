@@ -32,6 +32,11 @@
             libxkbcommon
           ])}
         '';
+        buildInputs = with pkgs; [
+          # flatpak build deps
+          (python3.withPackages (ps: with ps; [aiohttp toml]))
+          flatpak-builder
+        ];
       };
     });
 }

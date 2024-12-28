@@ -1,0 +1,8 @@
+*.desktop
+*.yml
+!manifest-template.yml
+!template.desktop
+
+builddir/
+cargo-sources.json
+flatpak-cargo-generator.py

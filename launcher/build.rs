@@ -16,13 +16,13 @@ fn main() {
     }
     for env in optional_envs.iter() {
         match env::var(env) {
-            Ok(value) => {
+            Ok(value) if value != "" => {
                 config_content.push_str(&format!(
                     "pub const {}: Option<&str> = Some(\"{}\");\n",
                     env, value
                 ));
             }
-            Err(_) => {
+            _ => {
                 config_content.push_str(&format!("pub const {}: Option<&str> = None;\n", env));
             }
         }

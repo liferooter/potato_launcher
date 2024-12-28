@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name={{ app_name }}
+Comment={{ app_description }}
+Type=Application
+Exec=potato-launcher
+Categories=Game;
+Keywords=Minecraft;Launcher;{{ flatpak_keywords }}
+Icon={{ flatpak_id }}
+StartupNotify=false
