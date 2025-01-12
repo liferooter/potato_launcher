@@ -32,6 +32,7 @@ fn main() {
     let data_launcher_name = env::var("LAUNCHER_NAME")
         .unwrap()
         .to_lowercase()
+        .replace('\'', "")
         .replace(" ", "_");
     let mut res = winres::WindowsResource::new();
 
