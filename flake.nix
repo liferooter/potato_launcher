@@ -37,6 +37,10 @@
           (python3.withPackages (ps: with ps; [aiohttp toml]))
           flatpak-builder
         ];
+        nativeBuildInputs = with pkgs; [
+          cargo
+          rustc
+        ];
       };
     });
 }
