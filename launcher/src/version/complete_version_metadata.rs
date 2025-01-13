@@ -139,7 +139,7 @@ impl CompleteVersionMetadata {
                 // Newer NeoForge versions add duplicate asm library
                 let (name, version) = library.get_name_and_version();
                 if let Some(prev_version) = existing_names.get(&name) {
-                    version == *prev_version
+                    version == *prev_version || name == "ca.weblite:java-objc-bridge"
                 } else {
                     existing_names.insert(name, version);
                     true
